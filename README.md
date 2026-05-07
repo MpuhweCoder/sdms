@@ -2,7 +2,7 @@
 
 A Laravel-based Student Data Management System built for managing student records with full CRUD functionality, search, sorting, and pagination.
 
----
+
 
 ## Features
 
@@ -16,7 +16,6 @@ A Laravel-based Student Data Management System built for managing student record
 - Clean UI using Blade templates
 - Laravel MVC architecture
 
----
 
 ## Tech Stack
 
@@ -27,7 +26,7 @@ A Laravel-based Student Data Management System built for managing student record
 - Bootstrap / Custom CSS
 - Git & GitHub
 
----
+
 
 ## Project Structure
 
@@ -46,7 +45,7 @@ A Laravel-based Student Data Management System built for managing student record
 | `search-pagination` | Search, sorting & pagination |
 | `feature/student-crud` | Combined CRUD feature branch |
 
----
+
 
 ## Installation
 
