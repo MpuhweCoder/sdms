@@ -446,19 +446,13 @@
     </div>{{-- /card-body --}}
 </div>{{-- /card --}}
 
-
 {{-- ── DELETE CONFIRMATION MODAL ──────────────────────── --}}
-{{--
-    This modal is rendered once. JavaScript fills in the
-    student name and sets the form action dynamically
-    when any Delete button is clicked.
---}}
 <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0" style="border-radius:14px;overflow:hidden;">
 
-            <div class="modal-header border-0 pb-0"
-                 style="background:#fff8f8;">
+            {{-- Modal Header --}}
+            <div class="modal-header border-0 pb-0" style="background:#fff8f8;">
                 <div class="d-flex align-items-center gap-3">
                     <div style="width:44px;height:44px;border-radius:50%;
                                 background:#fee2e2;display:flex;
@@ -470,30 +464,39 @@
                         Confirm Deletion
                     </h5>
                 </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
             </div>
 
+            {{-- Modal Body --}}
             <div class="modal-body px-4 pt-3 pb-2" style="background:#fff8f8;">
                 <p class="mb-0" style="color:#4b5563;">
-                    Are you sure you want to delete
-                    <strong id="modalStudentName" style="color:#111827;"></strong>?
-                    <br>
-                    <span style="font-size:0.85rem;color:#9ca3af;">
-                        This action cannot be undone.
-                    </span>
+                    Are you sure you want to permanently delete
+                    <strong id="modalStudentName" style="color:#dc2626;"></strong>?
+                </p>
+                <p class="mb-0 mt-2" style="font-size:0.83rem;color:#9ca3af;">
+                    <i class="bi bi-exclamation-circle me-1"></i>
+                    This action is irreversible. All data for this student
+                    will be permanently removed from the database.
                 </p>
             </div>
 
-            <div class="modal-footer border-0 pt-2" style="background:#fff8f8;">
-                <button type="button" class="btn btn-outline-secondary btn-sm"
+            {{-- Modal Footer --}}
+            <div class="modal-footer border-0 pt-2 gap-2" style="background:#fff8f8;">
+
+                {{-- Cancel button — closes modal, does nothing to DB --}}
+                <button type="button"
+                        class="btn btn-outline-secondary btn-sm px-3"
                         data-bs-dismiss="modal">
                     <i class="bi bi-x-circle me-1"></i>Cancel
                 </button>
 
                 {{--
-                    The action URL is set by JavaScript below.
-                    method="POST" + @method('DELETE') = Laravel
-                    method spoofing (HTML forms only support GET/POST).
+                    Delete form:
+                    - method POST  (HTML can't send DELETE directly)
+                    - @csrf        (protect against CSRF)
+                    - @method('DELETE') adds hidden _method=DELETE field
+                    - action is set dynamically by JavaScript
                 --}}
                 <form id="deleteForm" method="POST" class="d-inline">
                     @csrf
@@ -502,8 +505,8 @@
                         <i class="bi bi-trash3 me-1"></i>Yes, Delete
                     </button>
                 </form>
-            </div>
 
+            </div>
         </div>
     </div>
 </div>
@@ -513,24 +516,66 @@
 @push('scripts')
 <script>
 /**
- * Delete Modal — dynamic population
+ * Delete Modal — full implementation
  *
- * When any delete button is clicked, Bootstrap fires the
- * 'show.bs.modal' event. We read data-student-id and
- * data-student-name from the button that triggered it,
- * then update the modal text and form action accordingly.
+ * Responsibilities:
+ * 1. Populate modal with the correct student name + form action
+ * 2. Prevent double-submission with a loading state
+ * 3. Re-enable the button if the user cancels and opens another
  */
-document.getElementById('deleteModal').addEventListener('show.bs.modal', function (event) {
-    const button      = event.relatedTarget;
-    const studentId   = button.getAttribute('data-student-id');
-    const studentName = button.getAttribute('data-student-name');
+(function () {
 
-    // Update modal text
-    document.getElementById('modalStudentName').textContent = studentName;
+    const modal      = document.getElementById('deleteModal');
+    const deleteForm = document.getElementById('deleteForm');
+    const submitBtn  = deleteForm.querySelector('button[type="submit"]');
 
-    // Update the form action to the correct destroy URL
-    // e.g. /students/7
-    document.getElementById('deleteForm').action = '/students/' + studentId;
-});
+    /**
+     * When the modal is about to open, Bootstrap passes the
+     * triggering element (the delete button) as event.relatedTarget.
+     * We read its data attributes to personalise the modal.
+     */
+    modal.addEventListener('show.bs.modal', function (event) {
+        const button      = event.relatedTarget;
+        const studentId   = button.getAttribute('data-student-id');
+        const studentName = button.getAttribute('data-student-name');
+
+        // 1. Fill in the student name in the modal body
+        document.getElementById('modalStudentName').textContent = studentName;
+
+        // 2. Set the form action to the correct destroy URL
+        //    e.g. /students/7
+        deleteForm.action = '/students/' + studentId;
+
+        // 3. Reset submit button in case it was left in loading state
+        //    from a previous modal open (e.g. user opened modal,
+        //    clicked delete, then navigated back with browser back btn)
+        resetSubmitBtn();
+    });
+
+    /**
+     * On form submission, disable the button and show a spinner.
+     * This prevents double-clicking from sending two DELETE requests.
+     */
+    deleteForm.addEventListener('submit', function () {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML =
+            '<span class="spinner-border spinner-border-sm me-2" ' +
+            'role="status" aria-hidden="true"></span>Deleting...';
+    });
+
+    /**
+     * If the user closes the modal without confirming,
+     * reset the button back to its default state.
+     */
+    modal.addEventListener('hide.bs.modal', function () {
+        resetSubmitBtn();
+    });
+
+    function resetSubmitBtn() {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="bi bi-trash3 me-1"></i>Yes, Delete';
+    }
+
+})();
 </script>
 @endpush

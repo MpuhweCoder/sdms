@@ -114,15 +114,26 @@ public function index(): View
                          ->with('success', 'Student updated successfully!');
     }
 
-    /**
-     * DESTROY — Delete a student from the DB.
-     * Route: DELETE /students/{student}
-     */
-    public function destroy(Student $student): RedirectResponse
-    {
-        $student->delete();
+   /**
+ * DESTROY — Delete a student record from the database.
+ * Route: DELETE /students/{student}
+ *
+ * Route Model Binding gives us the Student instance directly.
+ * If the ID doesn't exist Laravel throws a 404 automatically —
+ * no need for findOrFail().
+ *
+ * After deletion we redirect back to the index with a
+ * success flash message so the user knows it worked.
+ */
+public function destroy(Student $student): RedirectResponse
+{
+    // Store the name before we delete so we can use it
+    // in the flash message (after deletion $student is gone)
+    $studentName = $student->name;
 
-        return redirect()->route('students.index')
-                         ->with('success', 'Student deleted successfully!');
-    }
+    // Eloquent delete — fires model events (useful for observers later)
+    $student->delete();
+
+    return redirect()->route('students.index')
+                     ->with('success', "Student \"{$studentName}\" has been deleted successfully.");
 }
