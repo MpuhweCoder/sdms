@@ -188,4 +188,4 @@ public function destroy(Student $student): RedirectResponse
 
     return redirect()->route('students.index')
                      ->with('success', "Student \"{$studentName}\" has been deleted successfully.");
-}
+}}
