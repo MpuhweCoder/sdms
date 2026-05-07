@@ -1,15 +1,21 @@
 @extends('layouts.app')
 
 @section('title', 'All Students — SDMS')
-
 @section('page-header')
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
         <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-2">
+                    <li class="breadcrumb-item">
+                        <a href="{{ route('dashboard') }}">Dashboard</a>
+                    </li>
+                    <li class="breadcrumb-item active">Students</li>
+                </ol>
+            </nav>
             <h1><i class="bi bi-people-fill me-2"></i>Student Records</h1>
             <p>
                 @if($search)
-                    Showing results for
-                    <strong style="color:#7ec8f7;">"{{ $search }}"</strong>
+                    Results for <strong style="color:#7ec8f7;">"{{ $search }}"</strong>
                 @else
                     Manage all registered students in one place.
                 @endif

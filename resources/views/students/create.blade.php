@@ -2,10 +2,20 @@
 
 @section('title', 'Add Student — SDMS')
 
-{{-- Page header injected into the blue banner --}}
 @section('page-header')
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
         <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-2">
+                    <li class="breadcrumb-item">
+                        <a href="{{ route('dashboard') }}">Dashboard</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ route('students.index') }}">Students</a>
+                    </li>
+                    <li class="breadcrumb-item active">Add New</li>
+                </ol>
+            </nav>
             <h1><i class="bi bi-person-plus-fill me-2"></i>Add New Student</h1>
             <p>Fill in the details below to register a new student.</p>
         </div>

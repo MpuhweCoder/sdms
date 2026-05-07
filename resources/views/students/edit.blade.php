@@ -1,12 +1,22 @@
 @extends('layouts.app')
 
 @section('title', 'Edit ' . $student->name . ' — SDMS')
-
 @section('page-header')
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
         <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-2">
+                    <li class="breadcrumb-item">
+                        <a href="{{ route('dashboard') }}">Dashboard</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ route('students.index') }}">Students</a>
+                    </li>
+                    <li class="breadcrumb-item active">Edit</li>
+                </ol>
+            </nav>
             <h1><i class="bi bi-pencil-square me-2"></i>Edit Student</h1>
-            <p>Update the details for <strong>{{ $student->name }}</strong></p>
+            <p>Updating details for <strong>{{ $student->name }}</strong></p>
         </div>
         <a href="{{ route('students.index') }}" class="btn btn-light btn-sm">
             <i class="bi bi-arrow-left me-1"></i>Back to Students

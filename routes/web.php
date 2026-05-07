@@ -9,10 +9,10 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-// Redirect root URL to students list
+// Dashboard — new landing page
 Route::get('/', function () {
-    return redirect()->route('students.index');
-});
+    return view('dashboard');
+})->name('dashboard');
 
-// Resource routes — generates all 7 RESTful routes automatically
+// Students resource routes
 Route::resource('students', StudentController::class);
