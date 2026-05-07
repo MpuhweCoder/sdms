@@ -74,23 +74,36 @@ public function index(): View
     }
 
     /**
-     * EDIT — Show the form to edit an existing student.
-     * Route: GET /students/{student}/edit
-     */
+ * EDIT — Show the prefilled edit form.
+ * Route: GET /students/{student}/edit
+ *
+ * Laravel's Route Model Binding automatically fetches the
+ * Student record from the DB using the {student} ID in the URL.
+ * If the ID doesn't exist → automatic 404. No manual query needed.
+ */
     public function edit(Student $student): View
     {
         return view('students.edit', compact('student'));
     }
 
-    /**
-     * UPDATE — Validate and update the student in the DB.
-     * Route: PUT/PATCH /students/{student}
-     */
+   /**
+ * UPDATE — Validate and save changes to the DB.
+ * Route: PUT /students/{student}
+ *
+ * The crucial difference from store() is the email uniqueness rule.
+ * We must tell Laravel: "this email is unique in the students table,
+ * BUT ignore the row whose id = $student->id".
+ * Without this, submitting the form without changing the email
+ * would fail its own uniqueness check.
+ */
     public function update(Request $request, Student $student): RedirectResponse
     {
         $validated = $request->validate([
             'name'   => 'required|string|max:100',
             'age'    => 'required|integer|min:1|max:120',
+                 // unique:table,column,ignoreId
+        // This tells the validator: check the students table,
+        // email column, but skip the row with id = $student->id
             'email'  => 'required|email|max:150|unique:students,email,' . $student->id,
             'course' => 'required|string|max:100',
         ]);
