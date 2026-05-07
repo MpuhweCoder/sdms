@@ -10,29 +10,81 @@ use Illuminate\Http\RedirectResponse;
 class StudentController extends Controller
 {
     /**
-     * INDEX — Display a listing of all students.
-     * Route: GET /students
-     *
-     * Later we'll add search + pagination here.
-     * For now, just fetch all records.
-     */
-    /**
- * INDEX — Display a listing of all students.
+ * INDEX — List students with search, sort and pagination.
  * Route: GET /students
  *
- * Student::latest() orders by created_at DESC so newest students
- * appear at the top. paginate(10) splits results into pages of 10.
+ * Query parameters accepted:
+ *   ?search=arjun        → filters name OR email OR course
+ *   ?sort=name           → column to sort by (name/age/email/course/created_at)
+ *   ?direction=asc|desc  → sort direction (default: asc)
+ *   ?page=2              → pagination page (handled by Laravel automatically)
  */
-public function index(): View
+public function index(Request $request): View
 {
-    $students = Student::latest()->paginate(10);
+    // ── 1. Read & sanitise query parameters ──────────────
+    $search    = trim($request->get('search', ''));
+    $sort      = $request->get('sort', 'created_at');
+    $direction = $request->get('direction', 'desc');
 
-    // total count for the stat card
-    $totalStudents = Student::count();
+    // Whitelist allowed sort columns to prevent SQL injection
+    // via the sort parameter. Any value not in this list
+    // falls back to 'created_at'.
+    $allowedSorts = ['name', 'age', 'email', 'course', 'created_at'];
+    if (!in_array($sort, $allowedSorts)) {
+        $sort = 'created_at';
+    }
 
-    return view('students.index', compact('students', 'totalStudents'));
+    // Whitelist direction too
+    $direction = $direction === 'asc' ? 'asc' : 'desc';
+
+    // ── 2. Build the query ────────────────────────────────
+    $query = Student::query();
+
+    if ($search !== '') {
+        /*
+         * Search across three columns simultaneously.
+         * We wrap the OR conditions in a closure so they
+         * are grouped together:
+         *
+         *   WHERE (name LIKE ? OR email LIKE ? OR course LIKE ?)
+         *
+         * Without the closure wrapping, adding any future
+         * AND conditions would break the logic.
+         */
+        $query->where(function ($q) use ($search) {
+            $q->where('name',   'LIKE', "%{$search}%")
+              ->orWhere('email',  'LIKE', "%{$search}%")
+              ->orWhere('course', 'LIKE', "%{$search}%");
+        });
+    }
+
+    // ── 3. Apply sort ─────────────────────────────────────
+    $query->orderBy($sort, $direction);
+
+    // ── 4. Paginate ───────────────────────────────────────
+    /*
+     * ->withQueryString() is crucial here.
+     * Without it, clicking page 2 would produce:
+     *   /students?page=2
+     * losing your search and sort parameters.
+     *
+     * With it, page links carry ALL current query params:
+     *   /students?search=arjun&sort=name&direction=asc&page=2
+     */
+    $students = $query->paginate(10)->withQueryString();
+
+    // ── 5. Stats ──────────────────────────────────────────
+    $totalStudents = Student::count();   // always the grand total
+    $filteredCount = $query->toBase()->getCountForPagination();
+
+    return view('students.index', compact(
+        'students',
+        'totalStudents',
+        'search',
+        'sort',
+        'direction'
+    ));
 }
-
     /**
      * CREATE — Show the form to add a new student.
      * Route: GET /students/create

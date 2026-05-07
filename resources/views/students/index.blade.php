@@ -6,7 +6,14 @@
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
         <div>
             <h1><i class="bi bi-people-fill me-2"></i>Student Records</h1>
-            <p>Manage all registered students in one place.</p>
+            <p>
+                @if($search)
+                    Showing results for
+                    <strong style="color:#7ec8f7;">"{{ $search }}"</strong>
+                @else
+                    Manage all registered students in one place.
+                @endif
+            </p>
         </div>
         <a href="{{ route('students.create') }}" class="btn btn-light fw-semibold">
             <i class="bi bi-person-plus-fill me-1"></i>Add New Student
@@ -16,7 +23,7 @@
 
 @push('styles')
 <style>
-    /* ── Stat card ─────────────────────────────────── */
+    /* ── Stat cards ────────────────────────────────────── */
     .stat-card {
         border-radius: 12px;
         border: none;
@@ -28,16 +35,56 @@
         box-shadow: 0 6px 20px rgba(0,0,0,0.12);
     }
     .stat-icon {
-        width: 52px;
-        height: 52px;
+        width: 52px; height: 52px;
         border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        display: flex; align-items: center; justify-content: center;
         font-size: 1.5rem;
+        flex-shrink: 0;
     }
 
-    /* ── Table ─────────────────────────────────────── */
+    /* ── Search bar ────────────────────────────────────── */
+    .search-wrapper {
+        position: relative;
+    }
+    .search-wrapper .bi-search {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #9ca3af;
+        font-size: 0.95rem;
+        pointer-events: none;
+    }
+    .search-input {
+        padding-left: 2.4rem !important;
+        border-radius: 10px !important;
+        border: 1.5px solid #e5e7eb !important;
+        height: 42px;
+        font-size: 0.93rem;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .search-input:focus {
+        border-color: #2d6a9f !important;
+        box-shadow: 0 0 0 3px rgba(45,106,159,0.12) !important;
+    }
+    .search-clear {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: #9ca3af;
+        font-size: 1rem;
+        cursor: pointer;
+        padding: 2px 6px;
+        border-radius: 4px;
+        line-height: 1;
+        display: none;
+    }
+    .search-clear:hover { color: #374151; }
+
+    /* ── Table ─────────────────────────────────────────── */
     .students-table {
         border-collapse: separate;
         border-spacing: 0;
@@ -45,28 +92,41 @@
     }
     .students-table thead th {
         background: #1e3a5f;
-        color: white;
+        color: rgba(255,255,255,0.85);
         font-weight: 600;
-        font-size: 0.82rem;
+        font-size: 0.8rem;
         letter-spacing: 0.6px;
         text-transform: uppercase;
         padding: 0.9rem 1.1rem;
         border: none;
         white-space: nowrap;
+        user-select: none;
     }
-    .students-table thead th:first-child {
-        border-radius: 10px 0 0 0;
+    .students-table thead th:first-child { border-radius: 10px 0 0 0; }
+    .students-table thead th:last-child  { border-radius: 0 10px 0 0; }
+
+    /* Sortable column header */
+    .sort-link {
+        color: rgba(255,255,255,0.85);
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        transition: color 0.15s;
     }
-    .students-table thead th:last-child {
-        border-radius: 0 10px 0 0;
+    .sort-link:hover { color: #ffffff; }
+    .sort-link.active { color: #7ec8f7; }
+    .sort-icon {
+        font-size: 0.7rem;
+        opacity: 0.5;
     }
+    .sort-link.active .sort-icon { opacity: 1; }
+
     .students-table tbody tr {
-        transition: background 0.15s, transform 0.15s;
-        cursor: default;
+        transition: background 0.12s;
     }
     .students-table tbody tr:hover {
         background-color: #eef4fb;
-        transform: scale(1.002);
     }
     .students-table tbody td {
         padding: 0.85rem 1.1rem;
@@ -75,24 +135,18 @@
         font-size: 0.93rem;
         color: #374151;
     }
-    .students-table tbody tr:last-child td {
-        border-bottom: none;
-    }
+    .students-table tbody tr:last-child td { border-bottom: none; }
 
-    /* ── Avatar circle ─────────────────────────────── */
+    /* ── Avatar ────────────────────────────────────────── */
     .avatar {
-        width: 38px;
-        height: 38px;
+        width: 38px; height: 38px;
         border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 700;
-        font-size: 0.95rem;
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 700; font-size: 0.95rem;
         flex-shrink: 0;
     }
 
-    /* ── Course badge ──────────────────────────────── */
+    /* ── Badges ────────────────────────────────────────── */
     .course-badge {
         display: inline-block;
         padding: 0.28rem 0.75rem;
@@ -103,8 +157,6 @@
         color: #1e3a5f;
         white-space: nowrap;
     }
-
-    /* ── Age pill ──────────────────────────────────── */
     .age-pill {
         display: inline-block;
         padding: 0.22rem 0.65rem;
@@ -115,48 +167,34 @@
         color: #374151;
     }
 
-    /* ── Action buttons ────────────────────────────── */
+    /* ── Action buttons ────────────────────────────────── */
     .btn-action {
-        width: 34px;
-        height: 34px;
+        width: 34px; height: 34px;
         border-radius: 8px;
         display: inline-flex;
-        align-items: center;
-        justify-content: center;
+        align-items: center; justify-content: center;
         font-size: 0.9rem;
         border: none;
         transition: all 0.18s;
         text-decoration: none;
+        cursor: pointer;
     }
-    .btn-edit {
-        background: #dbeafe;
-        color: #1d4ed8;
-    }
-    .btn-edit:hover {
-        background: #1d4ed8;
-        color: white;
-        transform: translateY(-1px);
-    }
-    .btn-delete {
-        background: #fee2e2;
-        color: #dc2626;
-    }
-    .btn-delete:hover {
-        background: #dc2626;
-        color: white;
-        transform: translateY(-1px);
-    }
-    .btn-view {
-        background: #d1fae5;
-        color: #065f46;
-    }
-    .btn-view:hover {
-        background: #065f46;
-        color: white;
-        transform: translateY(-1px);
+    .btn-edit   { background:#dbeafe; color:#1d4ed8; }
+    .btn-edit:hover   { background:#1d4ed8; color:white; transform:translateY(-1px); }
+    .btn-delete { background:#fee2e2; color:#dc2626; }
+    .btn-delete:hover { background:#dc2626; color:white; transform:translateY(-1px); }
+    .btn-view   { background:#d1fae5; color:#065f46; }
+    .btn-view:hover   { background:#065f46; color:white; transform:translateY(-1px); }
+
+    /* ── Search highlight ──────────────────────────────── */
+    mark.search-hl {
+        background: #fef08a;
+        color: #713f12;
+        border-radius: 3px;
+        padding: 0 2px;
     }
 
-    /* ── Empty state ───────────────────────────────── */
+    /* ── Empty state ───────────────────────────────────── */
     .empty-state {
         padding: 4rem 2rem;
         text-align: center;
@@ -166,7 +204,7 @@
         font-size: 4rem;
         display: block;
         margin-bottom: 1rem;
-        opacity: 0.4;
+        opacity: 0.35;
     }
     .empty-state h5 {
         font-weight: 600;
@@ -174,23 +212,27 @@
         margin-bottom: 0.5rem;
     }
 
-    /* ── Row number ────────────────────────────────── */
+    /* ── Row number ────────────────────────────────────── */
     .row-num {
         font-size: 0.78rem;
         font-weight: 700;
         color: #9ca3af;
-        min-width: 28px;
         text-align: center;
+    }
+
+    /* ── No results search tip ─────────────────────────── */
+    .search-tip {
+        font-size: 0.82rem;
+        color: #9ca3af;
+        margin-top: 0.5rem;
     }
 </style>
 @endpush
 
 @section('content')
 
-{{-- ── STAT CARDS ROW ─────────────────────────────────── --}}
+{{-- ── STAT CARDS ─────────────────────────────────────── --}}
 <div class="row g-3 mb-4 mt-1">
-
-    {{-- Total Students --}}
     <div class="col-sm-6 col-lg-3">
         <div class="card stat-card p-3">
             <div class="d-flex align-items-center gap-3">
@@ -198,37 +240,39 @@
                     <i class="bi bi-people-fill" style="color:#1e3a5f;"></i>
                 </div>
                 <div>
-                    <div class="text-muted" style="font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">
+                    <div class="text-muted"
+                         style="font-size:0.75rem;font-weight:600;
+                                text-transform:uppercase;letter-spacing:.5px;">
                         Total Students
                     </div>
-                    <div style="font-size:1.8rem;font-weight:700;line-height:1.1;color:#1e3a5f;">
+                    <div style="font-size:1.8rem;font-weight:700;
+                                line-height:1.1;color:#1e3a5f;">
                         {{ $totalStudents }}
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
-    {{-- Showing on this page --}}
     <div class="col-sm-6 col-lg-3">
         <div class="card stat-card p-3">
             <div class="d-flex align-items-center gap-3">
                 <div class="stat-icon" style="background:#d1fae5;">
-                    <i class="bi bi-card-list" style="color:#065f46;"></i>
+                    <i class="bi bi-funnel-fill" style="color:#065f46;"></i>
                 </div>
                 <div>
-                    <div class="text-muted" style="font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">
-                        Showing Now
+                    <div class="text-muted"
+                         style="font-size:0.75rem;font-weight:600;
+                                text-transform:uppercase;letter-spacing:.5px;">
+                        {{ $search ? 'Filtered' : 'Showing' }}
                     </div>
-                    <div style="font-size:1.8rem;font-weight:700;line-height:1.1;color:#065f46;">
-                        {{ $students->count() }}
+                    <div style="font-size:1.8rem;font-weight:700;
+                                line-height:1.1;color:#065f46;">
+                        {{ $students->total() }}
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
-    {{-- Current Page --}}
     <div class="col-sm-6 col-lg-3">
         <div class="card stat-card p-3">
             <div class="d-flex align-items-center gap-3">
@@ -236,210 +280,354 @@
                     <i class="bi bi-file-earmark-text" style="color:#92400e;"></i>
                 </div>
                 <div>
-                    <div class="text-muted" style="font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">
-                        Current Page
+                    <div class="text-muted"
+                         style="font-size:0.75rem;font-weight:600;
+                                text-transform:uppercase;letter-spacing:.5px;">
+                        Page
                     </div>
-                    <div style="font-size:1.8rem;font-weight:700;line-height:1.1;color:#92400e;">
+                    <div style="font-size:1.8rem;font-weight:700;
+                                line-height:1.1;color:#92400e;">
                         {{ $students->currentPage() }}
+                        <span style="font-size:1rem;color:#d97706;">
+                            / {{ $students->lastPage() }}
+                        </span>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
-    {{-- Total Pages --}}
     <div class="col-sm-6 col-lg-3">
         <div class="card stat-card p-3">
             <div class="d-flex align-items-center gap-3">
                 <div class="stat-icon" style="background:#ede9fe;">
-                    <i class="bi bi-layers" style="color:#5b21b6;"></i>
+                    <i class="bi bi-sort-down" style="color:#5b21b6;"></i>
                 </div>
                 <div>
-                    <div class="text-muted" style="font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">
-                        Total Pages
+                    <div class="text-muted"
+                         style="font-size:0.75rem;font-weight:600;
+                                text-transform:uppercase;letter-spacing:.5px;">
+                        Sorted By
                     </div>
-                    <div style="font-size:1.8rem;font-weight:700;line-height:1.1;color:#5b21b6;">
-                        {{ $students->lastPage() }}
+                    <div style="font-size:1rem;font-weight:700;
+                                line-height:1.4;color:#5b21b6;">
+                        {{ ucfirst(str_replace('_', ' ', $sort)) }}
+                        <span style="font-size:0.75rem;font-weight:500;
+                                     text-transform:uppercase;">
+                            {{ $direction }}
+                        </span>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-</div>{{-- /row --}}
-
-{{-- ── STUDENTS TABLE CARD ─────────────────────────────── --}}
+{{-- ── SEARCH + TABLE CARD ─────────────────────────────── --}}
 <div class="card">
-    <div class="card-header bg-white d-flex align-items-center justify-content-between
-                flex-wrap gap-2 border-bottom">
-        <span style="font-weight:700;font-size:1rem;color:#1e3a5f;">
-            <i class="bi bi-table me-2"></i>Student Records
-        </span>
-        <span class="badge rounded-pill"
-              style="background:#e0eaf5;color:#1e3a5f;font-size:0.8rem;padding:.4rem .9rem;">
-            {{ $totalStudents }} {{ Str::plural('student', $totalStudents) }} registered
-        </span>
+
+    {{-- ── SEARCH BAR ──────────────────────────────────── --}}
+    <div class="card-header bg-white border-bottom p-3">
+        <form method="GET"
+              action="{{ route('students.index') }}"
+              id="searchForm">
+
+            {{-- Preserve sort/direction when searching --}}
+            @if($sort !== 'created_at')
+                <input type="hidden" name="sort" value="{{ $sort }}">
+            @endif
+            @if($direction !== 'desc')
+                <input type="hidden" name="direction" value="{{ $direction }}">
+            @endif
+
+            <div class="row g-2 align-items-center">
+                <div class="col">
+                    <div class="search-wrapper">
+                        <i class="bi bi-search"></i>
+                        <input
+                            type="text"
+                            name="search"
+                            id="searchInput"
+                            class="form-control search-input"
+                            placeholder="Search by name, email or course…"
+                            value="{{ $search }}"
+                            autocomplete="off"
+                            spellcheck="false"
+                        >
+                        {{-- X button appears when there is text --}}
+                        <button type="button"
+                                class="search-clear"
+                                id="searchClear"
+                                title="Clear search">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary" style="height:42px;">
+                        <i class="bi bi-search me-1"></i>Search
+                    </button>
+                </div>
+                @if($search)
+                <div class="col-auto">
+                    <a href="{{ route('students.index', array_filter(['sort'=>$sort,'direction'=>$direction])) }}"
+                       class="btn btn-outline-secondary"
+                       style="height:42px;">
+                        <i class="bi bi-x-circle me-1"></i>Clear
+                    </a>
+                </div>
+                @endif
+            </div>
+
+        </form>
+
+        {{-- Active search result info --}}
+        @if($search)
+        <div class="mt-2 d-flex align-items-center gap-2 flex-wrap">
+            <span style="font-size:0.83rem;color:#374151;">
+                <i class="bi bi-funnel me-1 text-primary"></i>
+                Found <strong>{{ $students->total() }}</strong>
+                {{ Str::plural('result', $students->total()) }}
+                for <strong>"{{ $search }}"</strong>
+            </span>
+            @if($students->total() === 0)
+                <span class="search-tip">
+                    — try a shorter keyword or check spelling
+                </span>
+            @endif
+        </div>
+        @endif
+
     </div>
 
+    {{-- ── TABLE BODY ───────────────────────────────────── --}}
     <div class="card-body p-0">
 
         @if($students->isEmpty())
 
-            {{-- ── EMPTY STATE ── --}}
             <div class="empty-state">
-                <i class="bi bi-person-x"></i>
-                <h5>No students registered yet</h5>
-                <p class="mb-4" style="font-size:0.92rem;">
-                    Get started by adding your first student record.
-                </p>
-                <a href="{{ route('students.create') }}" class="btn btn-primary px-4">
-                    <i class="bi bi-person-plus me-1"></i>Add First Student
-                </a>
+                @if($search)
+                    <i class="bi bi-search"></i>
+                    <h5>No students match "{{ $search }}"</h5>
+                    <p class="mb-4">Try a different keyword or
+                        <a href="{{ route('students.index') }}">clear the search</a>.
+                    </p>
+                @else
+                    <i class="bi bi-person-x"></i>
+                    <h5>No students registered yet</h5>
+                    <p class="mb-4">Get started by adding your first student.</p>
+                    <a href="{{ route('students.create') }}"
+                       class="btn btn-primary px-4">
+                        <i class="bi bi-person-plus me-1"></i>Add First Student
+                    </a>
+                @endif
             </div>
 
         @else
 
-            {{-- ── TABLE ── --}}
-            <div class="table-responsive">
-                <table class="students-table">
-                    <thead>
-                        <tr>
-                            <th style="width:50px;">#</th>
-                            <th>Student</th>
-                            <th>Age</th>
-                            <th>Email</th>
-                            <th>Course</th>
-                            <th>Registered</th>
-                            <th style="width:120px; text-align:center;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($students as $index => $student)
-                        <tr>
-                            {{-- Row number (continues across pages) --}}
-                            <td>
-                                <span class="row-num">
-                                    {{ ($students->currentPage() - 1) * $students->perPage() + $index + 1 }}
-                                </span>
-                            </td>
+        <div class="table-responsive">
+            <table class="students-table">
+                <thead>
+                    <tr>
+                        <th style="width:48px;">#</th>
 
-                            {{-- Name + Avatar --}}
-                            <td>
-                                <div class="d-flex align-items-center gap-3">
-                                    {{--
-                                        Avatar uses first letter of name.
-                                        Color cycles through 5 options using
-                                        the student's id mod 5.
-                                    --}}
-                                    @php
-                                        $colors = [
-                                            ['bg'=>'#dbeafe','text'=>'#1d4ed8'],
-                                            ['bg'=>'#d1fae5','text'=>'#065f46'],
-                                            ['bg'=>'#fef3c7','text'=>'#92400e'],
-                                            ['bg'=>'#ede9fe','text'=>'#5b21b6'],
-                                            ['bg'=>'#fee2e2','text'=>'#991b1b'],
-                                        ];
-                                        $color = $colors[$student->id % 5];
-                                    @endphp
-                                    <div class="avatar"
-                                         style="background:{{ $color['bg'] }};
-                                                color:{{ $color['text'] }};">
-                                        {{ strtoupper(substr($student->name, 0, 1)) }}
+                        {{--
+                            Each sortable column header is a link.
+                            Clicking it sorts by that column.
+                            Clicking the active column reverses direction.
+                            The helper @sortIcon and @sortUrl are
+                            computed inline with @php blocks below.
+                        --}}
+
+                        {{-- Name --}}
+                        <th>
+                            @php
+                                $nameDir = ($sort==='name' && $direction==='asc') ? 'desc' : 'asc';
+                            @endphp
+                            <a href="{{ route('students.index', ['sort'=>'name','direction'=>$nameDir,'search'=>$search]) }}"
+                               class="sort-link {{ $sort==='name' ? 'active' : '' }}">
+                                Student
+                                <i class="bi {{ $sort==='name' ? ($direction==='asc' ? 'bi-arrow-up' : 'bi-arrow-down') : 'bi-arrow-down-up' }} sort-icon"></i>
+                            </a>
+                        </th>
+
+                        {{-- Age --}}
+                        <th>
+                            @php
+                                $ageDir = ($sort==='age' && $direction==='asc') ? 'desc' : 'asc';
+                            @endphp
+                            <a href="{{ route('students.index', ['sort'=>'age','direction'=>$ageDir,'search'=>$search]) }}"
+                               class="sort-link {{ $sort==='age' ? 'active' : '' }}">
+                                Age
+                                <i class="bi {{ $sort==='age' ? ($direction==='asc' ? 'bi-arrow-up' : 'bi-arrow-down') : 'bi-arrow-down-up' }} sort-icon"></i>
+                            </a>
+                        </th>
+
+                        {{-- Email --}}
+                        <th>
+                            @php
+                                $emailDir = ($sort==='email' && $direction==='asc') ? 'desc' : 'asc';
+                            @endphp
+                            <a href="{{ route('students.index', ['sort'=>'email','direction'=>$emailDir,'search'=>$search]) }}"
+                               class="sort-link {{ $sort==='email' ? 'active' : '' }}">
+                                Email
+                                <i class="bi {{ $sort==='email' ? ($direction==='asc' ? 'bi-arrow-up' : 'bi-arrow-down') : 'bi-arrow-down-up' }} sort-icon"></i>
+                            </a>
+                        </th>
+
+                        {{-- Course --}}
+                        <th>
+                            @php
+                                $courseDir = ($sort==='course' && $direction==='asc') ? 'desc' : 'asc';
+                            @endphp
+                            <a href="{{ route('students.index', ['sort'=>'course','direction'=>$courseDir,'search'=>$search]) }}"
+                               class="sort-link {{ $sort==='course' ? 'active' : '' }}">
+                                Course
+                                <i class="bi {{ $sort==='course' ? ($direction==='asc' ? 'bi-arrow-up' : 'bi-arrow-down') : 'bi-arrow-down-up' }} sort-icon"></i>
+                            </a>
+                        </th>
+
+                        {{-- Registered --}}
+                        <th>
+                            @php
+                                $dateDir = ($sort==='created_at' && $direction==='asc') ? 'desc' : 'asc';
+                            @endphp
+                            <a href="{{ route('students.index', ['sort'=>'created_at','direction'=>$dateDir,'search'=>$search]) }}"
+                               class="sort-link {{ $sort==='created_at' ? 'active' : '' }}">
+                                Registered
+                                <i class="bi {{ $sort==='created_at' ? ($direction==='asc' ? 'bi-arrow-up' : 'bi-arrow-down') : 'bi-arrow-down-up' }} sort-icon"></i>
+                            </a>
+                        </th>
+
+                        <th style="width:120px;text-align:center;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($students as $index => $student)
+                    <tr>
+                        {{-- Continuous row number across pages --}}
+                        <td>
+                            <span class="row-num">
+                                {{ ($students->currentPage()-1) * $students->perPage() + $index + 1 }}
+                            </span>
+                        </td>
+
+                        {{-- Name + Avatar --}}
+                        <td>
+                            <div class="d-flex align-items-center gap-3">
+                                @php
+                                    $colors = [
+                                        ['bg'=>'#dbeafe','text'=>'#1d4ed8'],
+                                        ['bg'=>'#d1fae5','text'=>'#065f46'],
+                                        ['bg'=>'#fef3c7','text'=>'#92400e'],
+                                        ['bg'=>'#ede9fe','text'=>'#5b21b6'],
+                                        ['bg'=>'#fee2e2','text'=>'#991b1b'],
+                                    ];
+                                    $color = $colors[$student->id % 5];
+                                @endphp
+                                <div class="avatar"
+                                     style="background:{{ $color['bg'] }};
+                                            color:{{ $color['text'] }};">
+                                    {{ strtoupper(substr($student->name, 0, 1)) }}
+                                </div>
+                                <div>
+                                    <div style="font-weight:600;color:#111827;">
+                                        {{-- Highlight search term in name --}}
+                                        {!! $search
+                                            ? preg_replace(
+                                                '/(' . preg_quote(e($search), '/') . ')/i',
+                                                '<mark class="search-hl">$1</mark>',
+                                                e($student->name)
+                                              )
+                                            : e($student->name)
+                                        !!}
                                     </div>
-                                    <div>
-                                        <div style="font-weight:600;color:#111827;">
-                                            {{ $student->name }}
-                                        </div>
-                                        <div style="font-size:0.78rem;color:#9ca3af;">
-                                            ID #{{ $student->id }}
-                                        </div>
+                                    <div style="font-size:0.75rem;color:#9ca3af;">
+                                        ID #{{ $student->id }}
                                     </div>
                                 </div>
-                            </td>
+                            </div>
+                        </td>
 
-                            {{-- Age --}}
-                            <td>
-                                <span class="age-pill">{{ $student->age }} yrs</span>
-                            </td>
+                        {{-- Age --}}
+                        <td>
+                            <span class="age-pill">{{ $student->age }} yrs</span>
+                        </td>
 
-                            {{-- Email --}}
-                            <td>
-                                <a href="mailto:{{ $student->email }}"
-                                   class="text-decoration-none"
-                                   style="color:#2d6a9f;font-size:0.88rem;">
-                                    {{ $student->email }}
+                        {{-- Email (highlighted) --}}
+                        <td>
+                            <a href="mailto:{{ $student->email }}"
+                               class="text-decoration-none"
+                               style="color:#2d6a9f;font-size:0.88rem;">
+                                {!! $search
+                                    ? preg_replace(
+                                        '/(' . preg_quote(e($search), '/') . ')/i',
+                                        '<mark class="search-hl">$1</mark>',
+                                        e($student->email)
+                                      )
+                                    : e($student->email)
+                                !!}
+                            </a>
+                        </td>
+
+                        {{-- Course (highlighted) --}}
+                        <td>
+                            <span class="course-badge">
+                                {!! $search
+                                    ? preg_replace(
+                                        '/(' . preg_quote(e($search), '/') . ')/i',
+                                        '<mark class="search-hl">$1</mark>',
+                                        e($student->course)
+                                      )
+                                    : e($student->course)
+                                !!}
+                            </span>
+                        </td>
+
+                        {{-- Registered date --}}
+                        <td style="color:#9ca3af;font-size:0.82rem;white-space:nowrap;">
+                            {{ $student->created_at->format('d M Y') }}
+                        </td>
+
+                        {{-- Actions --}}
+                        <td>
+                            <div class="d-flex justify-content-center gap-2">
+                                <a href="{{ route('students.show', $student) }}"
+                                   class="btn-action btn-view" title="View">
+                                    <i class="bi bi-eye"></i>
                                 </a>
-                            </td>
-
-                            {{-- Course --}}
-                            <td>
-                                <span class="course-badge">{{ $student->course }}</span>
-                            </td>
-
-                            {{-- Registered date --}}
-                            <td style="color:#9ca3af;font-size:0.82rem;white-space:nowrap;">
-                                {{ $student->created_at->format('d M Y') }}
-                            </td>
-
-                            {{-- Actions --}}
-                            <td>
-                                <div class="d-flex justify-content-center gap-2">
-
-                                    {{-- View --}}
-                                    <a href="{{ route('students.show', $student) }}"
-                                       class="btn-action btn-view"
-                                       title="View Details">
-                                        <i class="bi bi-eye"></i>
-                                    </a>
-
-                                    {{-- Edit --}}
-                                    <a href="{{ route('students.edit', $student) }}"
-                                       class="btn-action btn-edit"
-                                       title="Edit Student">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
-
-                                    {{-- Delete — triggers modal --}}
-                                    <button
-                                        type="button"
+                                <a href="{{ route('students.edit', $student) }}"
+                                   class="btn-action btn-edit" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <button type="button"
                                         class="btn-action btn-delete"
-                                        title="Delete Student"
+                                        title="Delete"
                                         data-bs-toggle="modal"
                                         data-bs-target="#deleteModal"
                                         data-student-id="{{ $student->id }}"
                                         data-student-name="{{ $student->name }}">
-                                        <i class="bi bi-trash3"></i>
-                                    </button>
+                                    <i class="bi bi-trash3"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
 
-                                </div>
-                            </td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-
-            {{-- ── TABLE FOOTER: count + pagination ── --}}
-            <div class="d-flex align-items-center justify-content-between
-                        flex-wrap gap-2 px-4 py-3 border-top"
-                 style="background:#fafafa;">
-
-                <small class="text-muted">
-                    Showing
-                    <strong>{{ $students->firstItem() }}</strong>–<strong>{{ $students->lastItem() }}</strong>
-                    of <strong>{{ $students->total() }}</strong> students
-                </small>
-
-                {{--
-                    ->links() renders Bootstrap-styled pagination.
-                    We need to tell Laravel to use Bootstrap pagination views.
-                    Add this to AppServiceProvider boot() — explained below.
-                --}}
-                <div>
-                    {{ $students->links() }}
-                </div>
-
-            </div>
+        {{-- ── TABLE FOOTER ────────────────────────────── --}}
+        <div class="d-flex align-items-center justify-content-between
+                    flex-wrap gap-2 px-4 py-3 border-top"
+             style="background:#fafafa;">
+            <small class="text-muted">
+                Showing
+                <strong>{{ $students->firstItem() }}</strong>–<strong>{{ $students->lastItem() }}</strong>
+                of <strong>{{ $students->total() }}</strong>
+                {{ $search ? 'results' : 'students' }}
+            </small>
+            {{ $students->links() }}
+        </div>
 
         @endif
 
@@ -447,18 +635,11 @@
 </div>{{-- /card --}}
 
 
-{{-- ── DELETE CONFIRMATION MODAL ──────────────────────── --}}
-{{--
-    This modal is rendered once. JavaScript fills in the
-    student name and sets the form action dynamically
-    when any Delete button is clicked.
---}}
+{{-- ── DELETE MODAL (unchanged from delete-student branch) ── --}}
 <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0" style="border-radius:14px;overflow:hidden;">
-
-            <div class="modal-header border-0 pb-0"
-                 style="background:#fff8f8;">
+            <div class="modal-header border-0 pb-0" style="background:#fff8f8;">
                 <div class="d-flex align-items-center gap-3">
                     <div style="width:44px;height:44px;border-radius:50%;
                                 background:#fee2e2;display:flex;
@@ -472,29 +653,21 @@
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-
             <div class="modal-body px-4 pt-3 pb-2" style="background:#fff8f8;">
                 <p class="mb-0" style="color:#4b5563;">
-                    Are you sure you want to delete
-                    <strong id="modalStudentName" style="color:#111827;"></strong>?
-                    <br>
-                    <span style="font-size:0.85rem;color:#9ca3af;">
-                        This action cannot be undone.
-                    </span>
+                    Are you sure you want to permanently delete
+                    <strong id="modalStudentName" style="color:#dc2626;"></strong>?
+                </p>
+                <p class="mb-0 mt-2" style="font-size:0.83rem;color:#9ca3af;">
+                    <i class="bi bi-exclamation-circle me-1"></i>
+                    This action is irreversible.
                 </p>
             </div>
-
-            <div class="modal-footer border-0 pt-2" style="background:#fff8f8;">
-                <button type="button" class="btn btn-outline-secondary btn-sm"
+            <div class="modal-footer border-0 pt-2 gap-2" style="background:#fff8f8;">
+                <button type="button" class="btn btn-outline-secondary btn-sm px-3"
                         data-bs-dismiss="modal">
                     <i class="bi bi-x-circle me-1"></i>Cancel
                 </button>
-
-                {{--
-                    The action URL is set by JavaScript below.
-                    method="POST" + @method('DELETE') = Laravel
-                    method spoofing (HTML forms only support GET/POST).
-                --}}
                 <form id="deleteForm" method="POST" class="d-inline">
                     @csrf
                     @method('DELETE')
@@ -503,7 +676,6 @@
                     </button>
                 </form>
             </div>
-
         </div>
     </div>
 </div>
@@ -512,25 +684,52 @@
 
 @push('scripts')
 <script>
-/**
- * Delete Modal — dynamic population
- *
- * When any delete button is clicked, Bootstrap fires the
- * 'show.bs.modal' event. We read data-student-id and
- * data-student-name from the button that triggered it,
- * then update the modal text and form action accordingly.
- */
-document.getElementById('deleteModal').addEventListener('show.bs.modal', function (event) {
-    const button      = event.relatedTarget;
-    const studentId   = button.getAttribute('data-student-id');
-    const studentName = button.getAttribute('data-student-name');
+(function () {
 
-    // Update modal text
-    document.getElementById('modalStudentName').textContent = studentName;
+    /* ── Search clear button ─────────────────────────── */
+    const searchInput = document.getElementById('searchInput');
+    const searchClear = document.getElementById('searchClear');
 
-    // Update the form action to the correct destroy URL
-    // e.g. /students/7
-    document.getElementById('deleteForm').action = '/students/' + studentId;
-});
+    function toggleClearBtn() {
+        searchClear.style.display = searchInput.value.length > 0 ? 'block' : 'none';
+    }
+    searchInput.addEventListener('input', toggleClearBtn);
+    toggleClearBtn(); // run on load in case of back-navigation
+
+    searchClear.addEventListener('click', function () {
+        searchInput.value = '';
+        toggleClearBtn();
+        searchInput.focus();
+        // Auto-submit to clear results immediately
+        document.getElementById('searchForm').submit();
+    });
+
+    /* ── Delete modal ────────────────────────────────── */
+    const modal      = document.getElementById('deleteModal');
+    const deleteForm = document.getElementById('deleteForm');
+    const submitBtn  = deleteForm.querySelector('button[type="submit"]');
+
+    modal.addEventListener('show.bs.modal', function (event) {
+        const button = event.relatedTarget;
+        document.getElementById('modalStudentName').textContent =
+            button.getAttribute('data-student-name');
+        deleteForm.action = '/students/' + button.getAttribute('data-student-id');
+        resetSubmitBtn();
+    });
+
+    deleteForm.addEventListener('submit', function () {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML =
+            '<span class="spinner-border spinner-border-sm me-2"></span>Deleting...';
+    });
+
+    modal.addEventListener('hide.bs.modal', resetSubmitBtn);
+
+    function resetSubmitBtn() {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="bi bi-trash3 me-1"></i>Yes, Delete';
+    }
+
+})();
 </script>
 @endpush
