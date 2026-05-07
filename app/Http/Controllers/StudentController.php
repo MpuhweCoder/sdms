@@ -16,12 +16,22 @@ class StudentController extends Controller
      * Later we'll add search + pagination here.
      * For now, just fetch all records.
      */
-    public function index(): View
-    {
-        $students = Student::latest()->paginate(10);
+    /**
+ * INDEX — Display a listing of all students.
+ * Route: GET /students
+ *
+ * Student::latest() orders by created_at DESC so newest students
+ * appear at the top. paginate(10) splits results into pages of 10.
+ */
+public function index(): View
+{
+    $students = Student::latest()->paginate(10);
 
-        return view('students.index', compact('students'));
-    }
+    // total count for the stat card
+    $totalStudents = Student::count();
+
+    return view('students.index', compact('students', 'totalStudents'));
+}
 
     /**
      * CREATE — Show the form to add a new student.
